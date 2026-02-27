@@ -1,0 +1,11 @@
+{{ if .Values.tlssecret }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "name" . }}-tlssecret
+  labels:
+    {{- include "labels" . | nindent 4 }}
+data:
+{{- toYaml .Values.tlssecret  | nindent 4 }}
+type: Opaque
+{{- end }}

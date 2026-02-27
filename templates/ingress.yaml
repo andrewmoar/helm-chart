@@ -1,0 +1,53 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "name" . }}
+  labels:
+    {{- include "labels" . | nindent 4 }}
+  annotations:
+    {{- range $key, $val := .Values.ingress.annotations }}
+    {{ $key }}: {{ $val | quote }}
+    {{- end }}
+
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ .Values.ingress.ingressPrefix }}.{{ .Values.ingress.innerSuffix }}
+      http:
+        paths:
+            - path: {{ .Values.ingress.path }}
+              pathType: ImplementationSpecific
+              backend:
+                service:
+                  name: {{ .Values.service.name }}
+                  port:
+                    number: {{ .Values.service.ingressPort }}
+    {{- if .Values.ingress.externalEnabled }}
+    - host: {{ .Values.ingress.externalPrefix }}.{{ .Values.ingress.externalSuffix }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.path }}
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ .Values.service.name }}
+                port:
+                  number: {{ .Values.service.ingressPort }}
+    {{- end -}}
+
+    {{- if .Values.ingress.externalSecondEnabled }}
+    - host: {{ .Values.ingress.externalSecondPrefix }}.{{ .Values.ingress.externalSecondSuffix }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.path }}
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ .Values.service.name }}
+                port:
+                  number: {{ .Values.service.ingressPort }}
+    {{- end -}}
+  {{- end -}}
+
+

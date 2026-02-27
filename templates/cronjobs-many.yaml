@@ -1,0 +1,57 @@
+{{- if .Values.ExtraCronjobs }}
+{{- $root := . -}}
+{{- range $job, $val := .Values.ExtraCronjobs }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "name" $ }}-job-{{ .name }}
+  labels:
+    {{- include "labels" $ | nindent 4 }}
+
+spec:
+  schedule: {{ .schedule | quote }} # cron spec of time
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  concurrencyPolicy: Replace
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: {{ default 100 .activeDeadlineSeconds }}
+      template:
+        metadata:
+        labels:
+          {{- include "selectorLabels" $ | nindent 8 }}
+        spec:
+          {{- if $root.Values.image.pullSecrets }}
+          imagePullSecrets:
+            - name: {{ $root.Values.image.pullSecrets }}
+          {{- end }}
+          {{- if $root.Values.serviceAccountName }}
+          serviceAccountName: {{ include "name" $ }}
+          {{- end }}
+          restartPolicy: Never
+          {{- if $root.Values.affinity }}
+          affinity: {{ toYaml $root.Values.affinity | nindent 12 }}
+          {{- end }}
+          {{- if $root.Values.tolerations }}
+          tolerations: {{ toYaml $root.Values.tolerations | nindent 12 }}
+          {{- end }}
+
+          containers:
+            - name: {{ include "name" $ }}-job-{{ .name }}
+              image: {{ $root.Values.extracronjob.image.name }}
+              command:
+              - /bin/sh
+              - -c
+              - {{ .command }}
+              envFrom:
+                - configMapRef:
+                    name: {{ include "name" $ }}
+                {{- if $root.Values.SecretsConfig }}
+                - secretRef:
+                    name: {{ include "name" $ }}
+                {{- end }}
+
+{{- end }}
+{{- end }}

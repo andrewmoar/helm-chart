@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "name" . }}
+  labels:
+    {{- include "labels" . | nindent 4 }}
+
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "selectorLabels" . | nindent 6 }}
+  strategy:
+    {{ toYaml .Values.strategy | nindent 4 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.serviceAccount }}
+      serviceAccountName: {{ include "name" . }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecrets }}
+      containers:
+        - name: {{ .Release.Name }}
+          {{- if .Values.command }}
+          command: {{- toYaml .Values.command | nindent 10 }}
+          {{- end }}
+          {{- if .Values.args }}
+          args:
+          {{- range .Values.args  }}
+          - {{ .  }}
+          {{- end }}
+          {{- end }}
+          image: {{ .Values.image.name }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.envSecretEnabled }}
+          env:
+            {{ toYaml .Values.envSecret | nindent 12 }}
+          {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "name" . }}
+            {{- if .Values.SecretsConfig }}
+            - secretRef:
+                name: {{ include "name" . }}
+            {{- end }}
+          {{- if .Values.volumeMounts }}
+          volumeMounts:
+            {{ toYaml .Values.volumeMounts | nindent 12 }}
+          {{- end }}
+          ports:
+            {{ toYaml .Values.service.deploymentPorts | nindent 12 }}
+          resources:
+            {{ toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+            {{ toYaml .Values.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+            {{ toYaml .Values.livenessProbe | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          {{- if .Values.lifecycle }}
+          {{- toYaml .Values.lifecycle | nindent 10 }}
+          {{- end -}}
+
+      {{- if .Values.volumes }}
+      volumes:
+      {{ toYaml .Values.volumes | nindent 8 }}
+      {{- end }}
