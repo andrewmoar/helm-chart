@@ -1,0 +1,99 @@
+
+name: &name go-test-app
+port: &port 9167
+image:
+  pullPolicy: IfNotPresent
+  pullSecrets: regcred
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/path: "/metrics"
+  prometheus.io/port: "9167"
+
+securityContext:
+  runAsUser: 1000
+  fsGroup: 1000
+  fsGroupChangePolicy: "OnRootMismatch"
+volumes:
+  - name: config
+    configMap:
+      name: *name
+  - name: *name
+    secret:
+      secretName: *name
+
+
+replicaCount: 1
+envSecretEnabled: true
+service:
+  name: *name
+  deploymentPorts:
+    - name: web-go
+      containerPort: *port
+      protocol: TCP
+  servicePorts:
+    - name: web-go
+      port: *port
+      targetPort: *port
+      protocol: TCP
+  ingressPort: *port
+ingress:
+   enabled: true
+   ingressPrefix: *name
+   innerSuffix: test.k8s-test.local
+   port:
+     name: *port
+   path: /
+   externalEnabled: true
+   externalPrefix: *name
+   externalSuffix: example.com
+   annotations:
+     nginx.ingress.kubernetes.io/proxy-body-size: 50m
+
+livenessProbeEnabled: true
+livenessProbe:
+  httpGet:
+    path: /metrics
+    port: *port
+  initialDelaySeconds: 10
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 7
+  successThreshold: 1
+
+readinessProbeEnabled: true
+readinessProbe:
+  httpGet:
+    path: /metrics
+    port: *port
+  initialDelaySeconds: 10
+  periodSeconds: 20
+  timeoutSeconds: 5
+  failureThreshold: 6
+  successThreshold: 1
+
+resources:
+  limits:
+    cpu: 1
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  resources:
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+env:
+  CONTAINER_NAME: *name
+  PROMETHEUS_METRICS_PORT: *port
+  # Collect
+  COLLECT_BATCH_SIZE: 1000
+
+  # Log
+  LOG_WRITE_TO_FILE: false
+  LOG_LEVEL: 5
+  
+
+
